@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   BarChart3,
   Users,
+  UserCog,
   Scale,
   ScrollText,
   LogOut,
@@ -16,6 +17,7 @@ const NAV = [
   { to: '/admin', label: '工作台', icon: LayoutDashboard, end: true },
   { to: '/admin/results', label: '评价结果', icon: BarChart3, end: false },
   { to: '/admin/participation', label: '参与情况', icon: Users, end: false },
+  { to: '/admin/users', label: '人员管理', icon: UserCog, end: false },
   { to: '/admin/weights', label: '权重管理', icon: Scale, end: false },
   { to: '/admin/logs', label: '操作日志', icon: ScrollText, end: false },
 ]
@@ -58,7 +60,7 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
-        <div className="px-4 py-4 border-t border-white/10">
+        <div className="px-4 py-4 border-b border-white/10">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">{currentUser.name}</p>

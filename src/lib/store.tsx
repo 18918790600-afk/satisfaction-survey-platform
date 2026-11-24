@@ -341,6 +341,17 @@ interface StoreCtx {
   startCycle: (month: string) => void
   resetDemo: () => void
   addLog: (action: string, detail: string) => void
+  addEmployee: (input: {
+    name: string
+    account: string
+    password: string
+    role: 'admin' | 'employee'
+  }) => { ok: boolean; error?: string }
+  removeEmployee: (employeeId: string) => { ok: boolean; error?: string }
+  updateEmployee: (
+    employeeId: string,
+    patch: { name?: string; role?: 'admin' | 'employee'; password?: string },
+  ) => { ok: boolean; error?: string }
 }
 
 const Ctx = createContext<StoreCtx | null>(null)
@@ -534,6 +545,104 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     persist(pushLog(fresh, currentUser?.name ?? '系统', '重置演示数据', '演示数据已重置为初始状态。'))
   }, [currentUser, persist, pushLog])
 
+  /* ---------------- 人员管理 ---------------- */
+
+  const addEmployee = useCallback(
+    (input: { name: string; account: string; password: string; role: 'admin' | 'employee' }) => {
+      if (!currentUser || currentUser.role !== 'admin') return { ok: false, error: '无权限操作。' }
+      const name = input.name.trim()
+      const account = input.account.trim()
+      const password = input.password.trim()
+      if (!name || !account || !password) return { ok: false, error: '姓名、工号和初始密码都不能为空。' }
+      if (db.employees.some((e) => e.account === account)) {
+        return { ok: false, error: `工号 ${account} 已存在，请更换。` }
+      }
+      const emp: Employee = {
+        id: uid('emp'),
+        name,
+        account,
+        password,
+        role: input.role,
+        weight: WEIGHT_RULE.base,
+      }
+      let next: DB = { ...db, employees: [...db.employees, emp] }
+      next = pushLog(
+        next,
+        currentUser.name,
+        '新增人员',
+        `新增${input.role === 'admin' ? '管理员' : '参评员工'} ${name}（${account}），初始权重 ${WEIGHT_RULE.base.toFixed(2)}。`,
+      )
+      persist(next)
+      return { ok: true }
+    },
+    [db, currentUser, persist, pushLog],
+  )
+
+  const removeEmployee = useCallback(
+    (employeeId: string) => {
+      if (!currentUser || currentUser.role !== 'admin') return { ok: false, error: '无权限操作。' }
+      const target = db.employees.find((e) => e.id === employeeId)
+      if (!target) return { ok: false, error: '人员不存在。' }
+      if (target.id === currentUser.id) return { ok: false, error: '不能删除当前登录的账号。' }
+      if (target.role === 'admin' && db.employees.filter((e) => e.role === 'admin').length <= 1) {
+        return { ok: false, error: '至少需要保留一名管理员。' }
+      }
+      let next: DB = {
+        ...db,
+        employees: db.employees.filter((e) => e.id !== employeeId),
+        // 同步清理其参与记录；匿名打分明细本就不含身份信息，按设计保留为历史数据
+        participations: db.participations.filter((p) => p.employeeId !== employeeId),
+      }
+      // 如果删的是自己以外的当前会话对象，无需处理会话
+      next = pushLog(
+        next,
+        currentUser.name,
+        '删除人员',
+        `删除${target.role === 'admin' ? '管理员' : '参评员工'} ${target.name}（${target.account}），其参与记录已同步清除。`,
+      )
+      persist(next)
+      return { ok: true }
+    },
+    [db, currentUser, persist, pushLog],
+  )
+
+  const updateEmployee = useCallback(
+    (employeeId: string, patch: { name?: string; role?: 'admin' | 'employee'; password?: string }) => {
+      if (!currentUser || currentUser.role !== 'admin') return { ok: false, error: '无权限操作。' }
+      const target = db.employees.find((e) => e.id === employeeId)
+      if (!target) return { ok: false, error: '人员不存在。' }
+      if (
+        target.role === 'admin' &&
+        patch.role === 'employee' &&
+        db.employees.filter((e) => e.role === 'admin').length <= 1
+      ) {
+        return { ok: false, error: '至少需要保留一名管理员，不能将其调整为参评员工。' }
+      }
+      const name = patch.name !== undefined ? patch.name.trim() : target.name
+      if (!name) return { ok: false, error: '姓名不能为空。' }
+      const password = patch.password !== undefined ? patch.password.trim() : target.password
+      if (!password) return { ok: false, error: '密码不能为空。' }
+
+      const changes: string[] = []
+      if (name !== target.name) changes.push(`姓名 ${target.name} → ${name}`)
+      if (patch.role && patch.role !== target.role) {
+        changes.push(patch.role === 'admin' ? '角色 参评员工 → 管理员' : '角色 管理员 → 参评员工')
+      }
+      if (password !== target.password) changes.push('重置登录密码')
+
+      const employees = db.employees.map((e) =>
+        e.id === employeeId ? { ...e, name, password, role: patch.role ?? e.role } : e,
+      )
+      let next: DB = { ...db, employees }
+      if (changes.length) {
+        next = pushLog(next, currentUser.name, '修改人员信息', `${target.name}（${target.account}）：${changes.join('；')}。`)
+        persist(next)
+      }
+      return { ok: true }
+    },
+    [db, currentUser, persist, pushLog],
+  )
+
   const value = useMemo(
     () => ({
       db,
@@ -547,8 +656,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       startCycle,
       resetDemo,
       addLog,
+      addEmployee,
+      removeEmployee,
+      updateEmployee,
     }),
-    [db, session, currentUser, login, logout, submitEvaluation, closeCycle, publishCycle, startCycle, resetDemo, addLog],
+    [db, session, currentUser, login, logout, submitEvaluation, closeCycle, publishCycle, startCycle, resetDemo, addLog, addEmployee, removeEmployee, updateEmployee],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

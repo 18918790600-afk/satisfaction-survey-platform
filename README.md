@@ -18,7 +18,7 @@
 ## 页面
 
 - 员工端：`/evaluate` 匿名打分、`/results` 结果公示
-- 管理端：`/admin` 工作台、`/admin/results` 评价结果（图表 + 明细 + 点评）、`/admin/participation` 参与情况（含未参与名单）、`/admin/weights` 权重管理、`/admin/logs` 操作日志
+- 管理端：`/admin` 工作台、`/admin/results` 评价结果（图表 + 明细 + 点评）、`/admin/participation` 参与情况（含未参与名单）、`/admin/users` 人员管理（新增 / 删除 / 角色调整 / 重置密码）、`/admin/weights` 权重管理、`/admin/logs` 操作日志
 
 ## 技术栈
 

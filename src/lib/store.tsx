@@ -65,7 +65,8 @@ const STAFF: SupportStaff[] = [
   { id: 'st-wlj', name: '王丽娟', job: 'platform' },
   { id: 'st-zzq', name: '张志强', job: 'platform' },
   { id: 'st-lhr', name: '刘浩然', job: 'network' },
-  { id: 'st-cjh', name: '陈建华', job: 'network' },
+  // 双重身份示例：林子豪（KF007）既是参评员工，也是本周期的网络终端技术支撑被评对象
+  { id: 'st-cjh', name: '林子豪', job: 'network', employeeId: 'emp-7' },
   { id: 'st-yl', name: '杨柳', job: 'complaint' },
   { id: 'st-zm', name: '赵敏', job: 'complaint' },
 ]
@@ -155,6 +156,7 @@ function seed(): DB {
       const at = new Date(2026, Number(cycle.month.slice(5)) - 1, day, 9 + Math.floor(rnd() * 9), Math.floor(rnd() * 60)).getTime()
       participations.push({ id: uid('pa'), cycleId: cycle.id, employeeId: emp.id, at })
       for (const st of STAFF) {
+        if (st.employeeId === emp.id) continue // 回避：本人不对自己的岗位打分
         const bias = 3.4 + rnd() * 1.4 // 每人对每个岗位的整体倾向
         const scores = QUESTIONS.filter((q) => q.job === st.job).map(() => {
           const v = Math.round(bias + (rnd() - 0.5) * 1.2)

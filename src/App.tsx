@@ -11,6 +11,7 @@ import ParticipationPage from './pages/admin/Participation'
 import Weights from './pages/admin/Weights'
 import Logs from './pages/admin/Logs'
 import Users from './pages/admin/Users'
+import Staff from './pages/admin/Staff'
 import type { ReactNode } from 'react'
 
 function RequireAuth({ children, role }: { children: ReactNode; role?: 'admin' | 'employee' }) {
@@ -62,6 +63,7 @@ function Shell() {
         <Route path="participation" element={<ParticipationPage />} />
         <Route path="weights" element={<Weights />} />
         <Route path="users" element={<Users />} />
+        <Route path="staff" element={<Staff />} />
         <Route path="logs" element={<Logs />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

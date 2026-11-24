@@ -4,6 +4,7 @@ import {
   BarChart3,
   Users,
   UserCog,
+  Headset,
   Scale,
   ScrollText,
   LogOut,
@@ -18,6 +19,7 @@ const NAV = [
   { to: '/admin/results', label: '评价结果', icon: BarChart3, end: false },
   { to: '/admin/participation', label: '参与情况', icon: Users, end: false },
   { to: '/admin/users', label: '人员管理', icon: UserCog, end: false },
+  { to: '/admin/staff', label: '岗位人员', icon: Headset, end: false },
   { to: '/admin/weights', label: '权重管理', icon: Scale, end: false },
   { to: '/admin/logs', label: '操作日志', icon: ScrollText, end: false },
 ]

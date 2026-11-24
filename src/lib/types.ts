@@ -21,6 +21,11 @@ export interface SupportStaff {
   id: string
   name: string
   job: JobType
+  /**
+   * 若该被评对象同时拥有参评员工账号（同一人在不同周期身份不同），
+   * 在此关联其 Employee.id；打分时系统自动回避，本人无法对自己评分。
+   */
+  employeeId?: string
 }
 
 export interface Question {

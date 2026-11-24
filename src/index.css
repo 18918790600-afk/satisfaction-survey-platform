@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 216 24% 97%;
+    --foreground: 222 30% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 30% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 30% 14%;
+    --primary: 221 72% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 20% 94%;
+    --secondary-foreground: 222 30% 18%;
+    --muted: 220 16% 93%;
+    --muted-foreground: 220 10% 40%;
+    --accent: 221 72% 95%;
+    --accent-foreground: 221 72% 32%;
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 16% 88%;
+    --input: 220 16% 84%;
+    --ring: 221 72% 42%;
+    --radius: 0.625rem;
+    --sidebar-background: 224 44% 13%;
+    --sidebar-foreground: 220 20% 82%;
+    --sidebar-primary: 221 72% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 224 36% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 224 30% 22%;
+    --sidebar-ring: 221 72% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC',
+      system-ui, -apple-system, sans-serif;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+}

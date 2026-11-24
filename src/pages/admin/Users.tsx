@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, Star } from 'lucide-react'
 import { toast } from 'sonner'
 import { useStore } from '../../lib/store'
-import type { Employee } from '../../lib/types'
+import { JOB_LABELS, type Employee } from '../../lib/types'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
@@ -186,6 +186,7 @@ export default function Users() {
             <TableBody>
               {people.map((emp) => {
                 const isSelf = emp.id === currentUser?.id
+                const linkedStaff = db.staff.find((s) => s.employeeId === emp.id)
                 return (
                   <TableRow key={emp.id}>
                     <TableCell className="num text-muted-foreground">{emp.account}</TableCell>
@@ -193,6 +194,15 @@ export default function Users() {
                       {emp.name}
                       {isSelf && (
                         <span className="ml-1.5 text-xs text-muted-foreground">（我）</span>
+                      )}
+                      {linkedStaff && (
+                        <Badge
+                          variant="outline"
+                          className="ml-1.5 bg-amber-50 text-amber-700 hover:bg-amber-50 border-amber-200 font-normal"
+                          title={`该员工同时是本周期的被评价对象，打分时系统自动回避本人评分项`}
+                        >
+                          兼被评·{JOB_LABELS[linkedStaff.job]}
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell>

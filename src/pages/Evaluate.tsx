@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { EyeOff, Send, CheckCircle2, Info } from 'lucide-react'
+import { EyeOff, Send, CheckCircle2, Info, UserX } from 'lucide-react'
 import { toast } from 'sonner'
 import EmployeeLayout from '../components/EmployeeLayout'
 import { StarRating } from '../components/StarRating'
@@ -54,15 +54,20 @@ export default function Evaluate() {
   const setScore = (staffId: string, qid: string, v: number) =>
     setScores((prev) => ({ ...prev, [staffId]: { ...prev[staffId], [qid]: v } }))
 
-  const totalQuestions = db.staff.length * 3
-  const answered = db.staff.reduce(
+  // 回避机制：本人若同时是本周期的被评对象，自动从问卷中剔除，不能自评；
+  // 完成其余岗位评价即视为正常参与，权重奖励不受影响。
+  const selfStaff = db.staff.filter((s) => s.employeeId === currentUser.id)
+  const visibleStaff = db.staff.filter((s) => s.employeeId !== currentUser.id)
+
+  const totalQuestions = visibleStaff.length * 3
+  const answered = visibleStaff.reduce(
     (acc, st) => acc + questionsFor(db, st.job).filter((q) => scores[st.id]?.[q.id]).length,
     0,
   )
   const allDone = answered === totalQuestions
 
   const doSubmit = () => {
-    const entries = db.staff.map((st) => ({
+    const entries = visibleStaff.map((st) => ({
       staffId: st.id,
       scores: questionsFor(db, st.job).map((q) => scores[st.id][q.id]),
       comment: comments[st.id],
@@ -85,6 +90,21 @@ export default function Evaluate() {
           </p>
         </div>
       </div>
+
+      {/* 回避提示：本人是被评对象时展示 */}
+      {selfStaff.length > 0 && !submitted && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3 mb-6">
+          <UserX className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-sm leading-relaxed text-amber-900">
+            <p className="font-medium">已按回避规则移除对本人的评分项</p>
+            <p className="text-amber-700/80 mt-0.5">
+              你同时是本周期被评价对象（
+              {selfStaff.map((s) => `${s.name} · ${JOB_LABELS[s.job]}`).join('、')}
+              ），系统已自动剔除相关题目。完成其余岗位的评价即视为正常参与，权重奖励不受影响。
+            </p>
+          </div>
+        </div>
+      )}
 
       {submitted ? (
         <Card className="max-w-xl mx-auto mt-10">
@@ -117,7 +137,7 @@ export default function Evaluate() {
                 {JOB_LABELS[job]}
               </h2>
               <div className="grid gap-4 md:grid-cols-2">
-                {db.staff
+                {visibleStaff
                   .filter((s) => s.job === job)
                   .map((st) => (
                     <Card key={st.id}>

@@ -554,11 +554,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!currentUser || currentUser.role !== 'admin') return { ok: false, error: '无权限操作。' }
       const target = db.staff.find((s) => s.id === staffId)
       if (!target) return { ok: false, error: '岗位人员不存在。' }
-      if (db.submissions.some((s) => s.staffId === staffId)) {
-        return { ok: false, error: '该人员已收到历史评价，为保证数据完整不可删除；下周期不再使用时可在新周期启动前调整。' }
+      // 级联清理：该人员收到的历史评价一并删除，历史月份结果中将不再包含该人员
+      const removedSubs = db.submissions.filter((s) => s.staffId === staffId).length
+      let next: DB = {
+        ...db,
+        staff: db.staff.filter((s) => s.id !== staffId),
+        submissions: db.submissions.filter((s) => s.staffId !== staffId),
       }
-      let next: DB = { ...db, staff: db.staff.filter((s) => s.id !== staffId) }
-      next = pushLog(next, currentUser.name, '删除岗位人员', `删除被评对象 ${target.name}（${JOB_LABELS[target.job]}）。`)
+      next = pushLog(
+        next,
+        currentUser.name,
+        '删除岗位人员',
+        `删除被评对象 ${target.name}（${JOB_LABELS[target.job]}）${removedSubs ? `，其 ${removedSubs} 条历史评价记录已一并清除` : ''}。`,
+      )
       persist(next)
       return { ok: true }
     },

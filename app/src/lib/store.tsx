@@ -421,18 +421,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (target.role === 'admin' && db.employees.filter((e) => e.role === 'admin').length <= 1) {
         return { ok: false, error: '至少需要保留一名管理员。' }
       }
+      const removedPa = db.participations.filter((p) => p.employeeId === employeeId).length
+      const linkedStaff = db.staff.filter((s) => s.employeeId === employeeId)
       let next: DB = {
         ...db,
         employees: db.employees.filter((e) => e.id !== employeeId),
         // 同步清理其参与记录；匿名打分明细本就不含身份信息，按设计保留为历史数据
         participations: db.participations.filter((p) => p.employeeId !== employeeId),
+        // 若该员工同时关联了被评岗位人员，同步解除关联，避免悬空引用
+        staff: db.staff.map((s) => (s.employeeId === employeeId ? { ...s, employeeId: undefined } : s)),
       }
       // 如果删的是自己以外的当前会话对象，无需处理会话
       next = pushLog(
         next,
         currentUser.name,
         '删除人员',
-        `删除${target.role === 'admin' ? '管理员' : '参评员工'} ${target.name}（${target.account}），其参与记录已同步清除。`,
+        `删除${target.role === 'admin' ? '管理员' : '参评员工'} ${target.name}（${target.account}），其 ${removedPa} 条参与记录已同步清除` +
+          `${linkedStaff.length ? `，并解除其与岗位人员 ${linkedStaff.map((s) => s.name).join('、')} 的关联` : ''}。`,
       )
       persist(next)
       return { ok: true }

@@ -64,7 +64,7 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
-        <div className="px-4 py-4 border-b border-white/10">
+        <div className="px-4 py-4 border-t border-white/10">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">{currentUser.name}</p>

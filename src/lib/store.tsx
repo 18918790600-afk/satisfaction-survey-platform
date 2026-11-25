@@ -354,6 +354,16 @@ interface StoreCtx {
     employeeId: string,
     patch: { name?: string; role?: 'admin' | 'employee'; password?: string },
   ) => { ok: boolean; error?: string }
+  addStaff: (input: {
+    name: string
+    job: JobType
+    employeeId?: string
+  }) => { ok: boolean; error?: string }
+  updateStaff: (
+    staffId: string,
+    patch: { name?: string; job?: JobType; employeeId?: string | null },
+  ) => { ok: boolean; error?: string }
+  removeStaff: (staffId: string) => { ok: boolean; error?: string }
 }
 
 const Ctx = createContext<StoreCtx | null>(null)
@@ -645,6 +655,94 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [db, currentUser, persist, pushLog],
   )
 
+  /* ---------------- 岗位人员管理（被评对象） ---------------- */
+
+  const addStaff = useCallback(
+    (input: { name: string; job: JobType; employeeId?: string }) => {
+      if (!currentUser || currentUser.role !== 'admin') return { ok: false, error: '无权限操作。' }
+      const name = input.name.trim()
+      if (!name) return { ok: false, error: '姓名不能为空。' }
+      if (input.employeeId && !db.employees.some((e) => e.id === input.employeeId)) {
+        return { ok: false, error: '关联的参评账号不存在。' }
+      }
+      const st: SupportStaff = {
+        id: uid('st'),
+        name,
+        job: input.job,
+        employeeId: input.employeeId || undefined,
+      }
+      let next: DB = { ...db, staff: [...db.staff, st] }
+      const linked = input.employeeId ? db.employees.find((e) => e.id === input.employeeId) : null
+      next = pushLog(
+        next,
+        currentUser.name,
+        '新增岗位人员',
+        `新增被评对象 ${name}（${JOB_LABELS[input.job]}）${linked ? `，关联参评账号 ${linked.name}（${linked.account}），其打分时自动回避` : ''}。`,
+      )
+      persist(next)
+      return { ok: true }
+    },
+    [db, currentUser, persist, pushLog],
+  )
+
+  const updateStaff = useCallback(
+    (staffId: string, patch: { name?: string; job?: JobType; employeeId?: string | null }) => {
+      if (!currentUser || currentUser.role !== 'admin') return { ok: false, error: '无权限操作。' }
+      const target = db.staff.find((s) => s.id === staffId)
+      if (!target) return { ok: false, error: '岗位人员不存在。' }
+      if (patch.employeeId && !db.employees.some((e) => e.id === patch.employeeId)) {
+        return { ok: false, error: '关联的参评账号不存在。' }
+      }
+      const name = patch.name !== undefined ? patch.name.trim() : target.name
+      if (!name) return { ok: false, error: '姓名不能为空。' }
+
+      const changes: string[] = []
+      if (name !== target.name) changes.push(`姓名 ${target.name} → ${name}`)
+      if (patch.job && patch.job !== target.job) {
+        changes.push(`岗位 ${JOB_LABELS[target.job]} → ${JOB_LABELS[patch.job]}`)
+      }
+      let nextLink = target.employeeId
+      if (patch.employeeId !== undefined) {
+        nextLink = patch.employeeId === null ? undefined : patch.employeeId
+        if (nextLink !== target.employeeId) {
+          if (nextLink) {
+            const emp = db.employees.find((e) => e.id === nextLink)!
+            changes.push(`关联参评账号 ${emp.name}（${emp.account}），其打分时自动回避`)
+          } else {
+            changes.push('取消参评账号关联')
+          }
+        }
+      }
+
+      const staff = db.staff.map((s) =>
+        s.id === staffId ? { ...s, name, job: patch.job ?? s.job, employeeId: nextLink } : s,
+      )
+      let next: DB = { ...db, staff }
+      if (changes.length) {
+        next = pushLog(next, currentUser.name, '修改岗位人员', `${target.name}：${changes.join('；')}。`)
+        persist(next)
+      }
+      return { ok: true }
+    },
+    [db, currentUser, persist, pushLog],
+  )
+
+  const removeStaff = useCallback(
+    (staffId: string) => {
+      if (!currentUser || currentUser.role !== 'admin') return { ok: false, error: '无权限操作。' }
+      const target = db.staff.find((s) => s.id === staffId)
+      if (!target) return { ok: false, error: '岗位人员不存在。' }
+      if (db.submissions.some((s) => s.staffId === staffId)) {
+        return { ok: false, error: '该人员已收到历史评价，为保证数据完整不可删除；下周期不再使用时可在新周期启动前调整。' }
+      }
+      let next: DB = { ...db, staff: db.staff.filter((s) => s.id !== staffId) }
+      next = pushLog(next, currentUser.name, '删除岗位人员', `删除被评对象 ${target.name}（${JOB_LABELS[target.job]}）。`)
+      persist(next)
+      return { ok: true }
+    },
+    [db, currentUser, persist, pushLog],
+  )
+
   const value = useMemo(
     () => ({
       db,
@@ -661,8 +759,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addEmployee,
       removeEmployee,
       updateEmployee,
+      addStaff,
+      updateStaff,
+      removeStaff,
     }),
-    [db, session, currentUser, login, logout, submitEvaluation, closeCycle, publishCycle, startCycle, resetDemo, addLog, addEmployee, removeEmployee, updateEmployee],
+    [db, session, currentUser, login, logout, submitEvaluation, closeCycle, publishCycle, startCycle, resetDemo, addLog, addEmployee, removeEmployee, updateEmployee, addStaff, updateStaff, removeStaff],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
